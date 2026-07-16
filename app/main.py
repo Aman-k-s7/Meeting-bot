@@ -102,7 +102,7 @@ async def manual_upload(
     file: UploadFile = File(None)
 ):
     transcript_text = ""
-    if file:
+    if file and file.filename:
         content = await file.read()
         transcript_text = content.decode("utf-8")
     elif transcript:

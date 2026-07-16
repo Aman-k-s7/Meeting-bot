@@ -1,0 +1,9 @@
+[00:00:00] Alice: Alright everyone, let's get started. Thanks for joining the Q3 planning meeting. Bob, can you give us an update on the frontend migration?
+[00:00:15] Bob: Yeah, we're about 80% done. I just need to finish up the dashboard components. I'll have that completed by next Friday.
+[00:00:25] Alice: Great. Charlie, what's the status on the backend API for the new user profile?
+[00:00:32] Charlie: I'm running into some issues with the database schema changes. I need to sync with Dave to figure out the best approach.
+[00:00:40] Dave: I'm free this afternoon. Let's block out 30 minutes to review the schema. I will set up the meeting invite right after this call.
+[00:00:48] Charlie: Perfect. Once that's sorted, I should be able to deliver the API by end of day Wednesday.
+[00:01:00] Alice: Excellent. One more thing, we need to update the documentation for the new API endpoints before the release. Eve, can you take that on?
+[00:01:10] Eve: Sure thing, Alice. I'll have the documentation drafted and ready for review by next Tuesday.
+[00:01:15] Alice: Sounds like a plan. Anything else? Okay, let's wrap up. Thanks everyone!

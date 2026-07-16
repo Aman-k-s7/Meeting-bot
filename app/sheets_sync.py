@@ -118,7 +118,7 @@ def append_action_items_to_sheet(meeting_data: dict) -> list:
         })
         
     if rows_to_append:
-        worksheet.append_rows(rows_to_append)
+        worksheet.append_rows(rows_to_append, table_range="A1")
         
     meeting_data["_project_code"] = project_code
     return appended_data

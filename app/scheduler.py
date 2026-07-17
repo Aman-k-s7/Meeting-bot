@@ -12,7 +12,6 @@ SCOPES = [
 def run_daily_scheduler():
     creds_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
     sheet_id = os.getenv("SHEET_ID")
-    worksheet_name = os.getenv("WORKSHEET_NAME", "Sheet1")
     
     if not creds_file or not os.path.exists(creds_file):
         print("Scheduler skipped: Creds file not found.")
@@ -25,58 +24,67 @@ def run_daily_scheduler():
     client = gspread.authorize(creds)
     
     spreadsheet = client.open_by_key(sheet_id)
-    try:
-        worksheet = spreadsheet.worksheet(worksheet_name)
-    except gspread.exceptions.WorksheetNotFound:
-        print("Worksheet not found.")
-        return
-        
-    records = worksheet.get_all_records()
+    worksheets = spreadsheet.worksheets()
+    
     now_utc = datetime.utcnow()
     current_timestamp = now_utc.strftime("%Y-%m-%d %H:%M")
     
-    reminders = []
-    all_open = []
+    all_reminders = []
+    all_open_for_digest = []
     
-    # We need to update specific cells: J (Aging) and K (Email Push)
-    # gspread uses 1-based indexing, header is row 1, data starts at row 2
-    cells_to_update = []
-    
-    for idx, row in enumerate(records):
-        row_num = idx + 2
-        status = str(row.get("Status", "Open"))
-        if status.lower() == "done":
+    for worksheet in worksheets:
+        # Skip internal or empty sheets
+        if worksheet.title in ["Metadata", "Sheet1"]:
             continue
             
-        meeting_date_str = str(row.get("Meeting Date", ""))
         try:
-            meeting_date = datetime.strptime(meeting_date_str, "%Y-%m-%d")
-            aging_days = (now_utc - meeting_date).days
-        except Exception:
-            aging_days = 0
+            records = worksheet.get_all_records()
+        except Exception as e:
+            print(f"Skipping worksheet {worksheet.title}: {e}")
+            continue
             
-        cells_to_update.append(gspread.Cell(row=row_num, col=10, value=aging_days)) # J is 10
-        cells_to_update.append(gspread.Cell(row=row_num, col=11, value=current_timestamp)) # K is 11
+        cells_to_update = []
         
-        item_data = {
-            "project_code": row.get("Project Code", ""),
-            "action_item": row.get("Action Item", ""),
-            "owner": row.get("Owner", ""),
-            "email": row.get("Email", ""),
-            "aging": aging_days
-        }
-        reminders.append(item_data)
-        all_open.append(item_data)
+        for idx, row in enumerate(records):
+            row_num = idx + 2
+            status = str(row.get("Status", "Open"))
+            if status.lower() == "done":
+                continue
+                
+            meeting_date_str = str(row.get("Meeting Date", ""))
+            try:
+                meeting_date = datetime.strptime(meeting_date_str, "%Y-%m-%d")
+                aging_days = (now_utc - meeting_date).days
+            except Exception:
+                aging_days = 0
+                
+            cells_to_update.append(gspread.Cell(row=row_num, col=10, value=aging_days)) # J is 10
+            
+            # Since scheduler runs daily, we don't want to overwrite the "Sent" flag 
+            # if they already got their immediate email push. We can leave K alone, 
+            # or update another column for "Last Reminder Sent".
+            # For now, we only update Aging (J).
+            
+            item_data = {
+                "project_code": row.get("Project Code", ""),
+                "action_item": row.get("Action Item", ""),
+                "owner": row.get("Owner", ""),
+                "email": row.get("Email", ""),
+                "aging": aging_days,
+                "manager": worksheet.title
+            }
+            all_reminders.append(item_data)
+            all_open_for_digest.append(item_data)
+            
+        if cells_to_update:
+            worksheet.update_cells(cells_to_update)
+            print(f"Updated {len(cells_to_update)} aging rows in '{worksheet.title}'.")
+            
+    if all_reminders:
+        send_reminder_emails_batch(all_reminders)
         
-    if cells_to_update:
-        worksheet.update_cells(cells_to_update)
-        print(f"Updated {len(cells_to_update) // 2} rows in Sheets.")
-        
-    if reminders:
-        send_reminder_emails_batch(reminders)
-        
-    if all_open:
-        send_digest_email(all_open)
+    if all_open_for_digest:
+        send_digest_email(all_open_for_digest)
 
 if __name__ == "__main__":
     from dotenv import load_dotenv

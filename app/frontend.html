@@ -152,6 +152,16 @@
 
         <form id="uploadForm">
             <div class="form-group">
+                <label for="manager_name">Select Manager</label>
+                <select id="manager_name" name="manager_name" required>
+                    <option value="" disabled selected>Select the manager...</option>
+                    <option value="Aman">Aman</option>
+                    <option value="Anshika">Anshika</option>
+                    <option value="Alice">Alice</option>
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label for="transcript">Paste Transcript Text</label>
                 <textarea id="transcript" name="transcript" placeholder="Paste the full meeting transcript here..."></textarea>
             </div>

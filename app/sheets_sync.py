@@ -8,13 +8,17 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-OWNER_EMAIL_MAP = {
-    "alice": "alice@example.com",
-    "bob": "bob@example.com",
-    "charlie": "charlie@example.com",
-    "dave": "dave@example.com",
-    "eve": "eve@example.com"
-}
+import json
+
+# Try to load real employee emails from emails.json, fallback to empty dict
+OWNER_EMAIL_MAP = {}
+email_json_path = os.path.join(os.path.dirname(__file__), "emails.json")
+if os.path.exists(email_json_path):
+    with open(email_json_path, "r", encoding="utf-8") as f:
+        try:
+            OWNER_EMAIL_MAP = json.load(f)
+        except Exception as e:
+            print(f"Warning: Failed to load emails.json: {e}")
 
 def get_next_project_code(client: gspread.Client, sheet_id: str) -> str:
     """
@@ -40,9 +44,10 @@ def get_next_project_code(client: gspread.Client, sheet_id: str) -> str:
     
     return f"MTG-{next_val:03d}"
 
-def append_action_items_to_sheet(meeting_data: dict) -> list:
+def append_action_items_to_sheet(meeting_data: dict, worksheet_name: str) -> list:
     """
     Appends action items to the Google Sheet exactly matching the schema.
+    Creates a new worksheet for the given worksheet_name if it doesn't exist.
     Returns the list of rows that were appended (for email notifications).
     """
     if str(os.getenv("PUSH_TO_SHEETS", "true")).lower() != "true":
@@ -50,8 +55,10 @@ def append_action_items_to_sheet(meeting_data: dict) -> list:
         
     creds_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
     sheet_id = os.getenv("SHEET_ID")
-    worksheet_name = os.getenv("WORKSHEET_NAME", "Sheet1")
     
+    if not worksheet_name:
+        worksheet_name = "Meeting-Bot"
+        
     if not creds_file or not os.path.exists(creds_file):
         print(f"Sheets sync skipped: Creds file {creds_file} not found.")
         return []

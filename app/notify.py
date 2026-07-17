@@ -12,10 +12,14 @@ def get_smtp_connection():
     if not host or not user or not password:
         return None
         
-    server = smtplib.SMTP(host, port)
-    server.starttls()
-    server.login(user, password)
-    return server
+    try:
+        server = smtplib.SMTP(host, port)
+        server.starttls()
+        server.login(user, password)
+        return server
+    except Exception as e:
+        print(f"SMTP Connection Error: {e}")
+        return None
 
 def send_email(to_email: str, subject: str, body: str) -> bool:
     from_name = os.getenv("FROM_NAME", "Meeting Bot")

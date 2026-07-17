@@ -39,7 +39,7 @@ def is_duplicate(transcript_text: str) -> bool:
     processed_hashes[text_hash] = today_str
     return False
 
-def run_pipeline(transcript_text: str, manager_name: str) -> dict:
+def run_pipeline(transcript_text: str, user_name: str) -> dict:
     if is_duplicate(transcript_text):
         return {"status": "skipped", "message": "Exact duplicate transcript submitted today."}
         
@@ -47,7 +47,7 @@ def run_pipeline(transcript_text: str, manager_name: str) -> dict:
     meeting_data = extract_action_items(transcript_text)
     
     # 2. Sheets Sync
-    appended_items = append_action_items_to_sheet(meeting_data, manager_name)
+    appended_items = append_action_items_to_sheet(meeting_data, user_name)
     project_code = meeting_data.get("_project_code", "MTG-???")
     
     # 3. Notion Sync (Optional)
@@ -63,8 +63,8 @@ def run_pipeline(transcript_text: str, manager_name: str) -> dict:
         "items_processed": len(appended_items)
     }
 
-@app.post("/webhook/readai/{manager_name}")
-async def readai_webhook(request: Request, manager_name: str):
+@app.post("/webhook/readai/{user_name}")
+async def readai_webhook(request: Request, user_name: str):
     signing_key = os.getenv("READAI_SIGNING_KEY")
     raw_body = await request.body()
     
@@ -93,14 +93,14 @@ async def readai_webhook(request: Request, manager_name: str):
     if not transcript:
         raise HTTPException(status_code=400, detail="Missing transcript in payload")
         
-    result = run_pipeline(transcript, manager_name)
+    result = run_pipeline(transcript, user_name)
     return result
 
 @app.post("/manual-upload")
 async def manual_upload(
     transcript: str = Form(None),
     file: UploadFile = File(None),
-    manager_name: str = Form(...)
+    user_name: str = Form(...)
 ):
     transcript_text = ""
     if file and file.filename:
@@ -114,5 +114,5 @@ async def manual_upload(
     if not transcript_text.strip():
         raise HTTPException(status_code=400, detail="Transcript is empty")
         
-    result = run_pipeline(transcript_text, manager_name)
+    result = run_pipeline(transcript_text, user_name)
     return result

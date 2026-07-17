@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 
 from app.extract import extract_action_items
-from app.sheets_sync import append_action_items_to_sheet
+from app.sheets_sync import append_action_items_to_sheet, update_email_push_status
 from app.notion_sync import append_action_items_to_notion
 from app.notify import send_immediate_emails
 
@@ -55,7 +55,9 @@ def run_pipeline(transcript_text: str, user_name: str) -> dict:
     
     # 4. Immediate Emails
     if appended_items:
-        send_immediate_emails(appended_items)
+        successful_emails = send_immediate_emails(appended_items)
+        if successful_emails:
+            update_email_push_status(user_name, successful_emails)
         
     return {
         "status": "success",

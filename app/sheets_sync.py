@@ -129,3 +129,43 @@ def append_action_items_to_sheet(meeting_data: dict, worksheet_name: str) -> lis
         
     meeting_data["_project_code"] = project_code
     return appended_data
+
+def update_email_push_status(worksheet_name: str, successful_items: list):
+    """
+    Updates the 'Email Push' column to 'Sent' for items that were successfully emailed.
+    """
+    if not successful_items:
+        return
+        
+    creds_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
+    sheet_id = os.getenv("SHEET_ID")
+    if not creds_file or not os.path.exists(creds_file) or not sheet_id:
+        return
+    
+    if not worksheet_name:
+        worksheet_name = "Meeting-Bot"
+        
+    creds = Credentials.from_service_account_file(creds_file, scopes=SCOPES)
+    client = gspread.authorize(creds)
+    spreadsheet = client.open_by_key(sheet_id)
+    
+    try:
+        worksheet = spreadsheet.worksheet(worksheet_name)
+    except gspread.exceptions.WorksheetNotFound:
+        return
+
+    records = worksheet.get_all_values()
+    cells_to_update = []
+    
+    for item in successful_items:
+        pc = item.get("project_code")
+        ai = item.get("action_item")
+        
+        for i, row in enumerate(records):
+            # Column A is row[0] (Project Code), Column F is row[5] (Action Item)
+            if len(row) > 5 and row[0] == pc and row[5] == ai:
+                # Column K is 11 (1-based index)
+                cells_to_update.append(gspread.Cell(row=i+1, col=11, value="Sent"))
+                
+    if cells_to_update:
+        worksheet.update_cells(cells_to_update)

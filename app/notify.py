@@ -17,7 +17,7 @@ def get_smtp_connection():
     server.login(user, password)
     return server
 
-def send_email(to_email: str, subject: str, body: str):
+def send_email(to_email: str, subject: str, body: str) -> bool:
     from_name = os.getenv("FROM_NAME", "Meeting Bot")
     from_email = os.getenv("SMTP_USER")
     
@@ -33,19 +33,26 @@ def send_email(to_email: str, subject: str, body: str):
         try:
             server.send_message(msg)
             print(f"Email sent to {to_email}")
+            return True
+        except Exception as e:
+            print(f"Failed to send email to {to_email}: {e}")
+            return False
         finally:
             server.quit()
     else:
         print(f"[Dry Run - SMTP Not Configured] Email to {to_email} | Subject: {subject} | Body: {body}")
+        return False
 
-def send_immediate_emails(appended_items: list):
+def send_immediate_emails(appended_items: list) -> list:
     """
     Called upon creation to email the owner of the action item.
     appended_items is a list of dicts.
+    Returns a list of items that were successfully emailed.
     """
     if str(os.getenv("SEND_IMMEDIATE_EMAILS", "true")).lower() != "true":
-        return
+        return []
 
+    successful_items = []
     for item in appended_items:
         email = item.get("email")
         if email:
@@ -57,7 +64,11 @@ def send_immediate_emails(appended_items: list):
             <p><b>Timeline:</b> {item.get('timeline')}</p>
             <p>Please update the Google Sheet when this is completed.</p>
             """
-            send_email(email, subject, body)
+            success = send_email(email, subject, body)
+            if success:
+                successful_items.append(item)
+                
+    return successful_items
 
 def send_reminder_emails_batch(reminders: list):
     """
